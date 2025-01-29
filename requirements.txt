@@ -1,8 +1,8 @@
 tensorflow
-numpy==1.24.4
-matplotlib==3.7.1
-pandas==1.5.3
-scikit-learn==1.2.2
-opencv-python==4.8.0.76
-Pillow==10.0.1
-streamlit==1.25.0
+numpy
+matplotlib
+pandas
+scikit-learn
+opencv-python
+Pillow
+streamlit
