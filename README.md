@@ -129,38 +129,12 @@ def build_model():
 3. Click "Analyze" to process images
 4. Review the comprehensive results
 
-### Advanced Features
-* **Batch Analysis**: Upload multiple images for concurrent processing
-* **Custom Thresholds**: Adjust confidence thresholds for detection
-* **Export Options**: Save reports in PDF, CSV, or JSON formats
-* **API Integration**: REST API available for system integration
-
 ## 📊 Performance Metrics
 
 ### Model Performance
 * Training Accuracy: 90.5%
 * Validation Accuracy: 92.3%
-* F1-Score: 0.91
 * Inference Speed: 1.8s average
-
-### System Requirements
-* Processing Speed: <2s per image
-* Memory Usage: ~4GB RAM
-* GPU Memory: 4GB VRAM (recommended)
-
-## 🔒 Data Privacy & Security
-
-### Privacy Measures
-* Zero data retention policy
-* Local processing only
-* Automatic cleanup of temporary files
-* HIPAA-compliant data handling
-
-### Security Features
-* Encrypted data transmission
-* Access control implementation
-* Audit logging
-* Regular security updates
 
 ## 🤝 Contributing
 
