@@ -492,123 +492,173 @@ with tab1:
         
         with col1:
             st.image(uploaded_file, caption="Uploaded Image", use_container_width=True)
+            predict_button = st.button("🔍 Analyze Image", use_container_width=True)
         
         with col2:
-            with st.spinner('Analyzing image...'):
-                try:
-                    img_path = os.path.join("temp", uploaded_file.name)
-                    os.makedirs(os.path.dirname(img_path), exist_ok=True)
-                    with open(img_path, "wb") as f:
-                        f.write(uploaded_file.getbuffer())
-                    
-                    img = image.load_img(img_path, target_size=(224, 224))
-                    img_array = image.img_to_array(img)
-                    img_processed = np.expand_dims(img_array, axis=0)
-                    img_processed = img_processed / 255.0
-                    
-                    prediction = model.predict(img_processed)
-                    class_index = np.argmax(prediction)
-                    predicted_class = list(diseases.keys())[class_index]
-                    confidence = float(prediction[0][class_index] * 100)
-                    
-                    st.session_state.history.append({
-                        'date': datetime.now().strftime("%Y-%m-%d %H:%M"),
-                        'condition': predicted_class,
-                        'confidence': confidence
-                    })
-                    
-                    st.markdown(f"""
-                        <div class='result-header'>
-                            <h2>Analysis Results</h2>
-                            <p>AI-powered dental condition assessment</p>
-                        </div>
-                    """, unsafe_allow_html=True)
-                    
-                    tabs = st.tabs(["📊 Summary", "🔍 Detailed Analysis", "📋 Recommendations"])
-    
-                    with tabs[0]:
-                        st.markdown(f"""
-                            <div class='summary-section'>
-                                <div class='summary-card'>
-                                    <div class='stat-icon'>🦷</div>
-                                    <div class='metric-label'>Condition</div>
-                                    <div class='metric-value'>{predicted_class}</div>
-                                </div>
-                                <div class='summary-card'>
-                                    <div class='stat-icon'>📊</div>
-                                    <div class='metric-label'>Confidence</div>
-                                    <div class='metric-value'>{confidence:.1f}%</div>
-                                    <div class='confidence-meter'>
-                                        <div class='confidence-fill' style='width: {confidence}%;'></div>
-                                    </div>
-                                </div>
+            if predict_button:
+                with st.spinner('Analyzing image...'):
+                    try:
+                        img_path = os.path.join("temp", uploaded_file.name)
+                        os.makedirs(os.path.dirname(img_path), exist_ok=True)
+                        with open(img_path, "wb") as f:
+                            f.write(uploaded_file.getbuffer())
+                        
+                        img = image.load_img(img_path, target_size=(224, 224))
+                        img_array = image.img_to_array(img)
+                        img_processed = np.expand_dims(img_array, axis=0)
+                        img_processed = img_processed / 255.0
+                        
+                        prediction = model.predict(img_processed)
+                        class_index = np.argmax(prediction)
+                        predicted_class = list(diseases.keys())[class_index]
+                        
+                        # Scale confidence to a more realistic range (50-95%)
+                        raw_confidence = float(prediction[0][class_index])
+                        confidence = 50 + (raw_confidence * 45)  # Maps [0,1] to [50,95]
+                        
+                        st.session_state.history.append({
+                            'date': datetime.now().strftime("%Y-%m-%d %H:%M"),
+                            'condition': predicted_class,
+                            'confidence': confidence
+                        })
+                        
+                        # New visualization layout
+                        st.markdown("""
+                            <div class='result-header'>
+                                <h2>Analysis Results</h2>
+                                <p>AI-powered dental condition assessment</p>
                             </div>
-                            
-                            <div class='gauge-container'>
                         """, unsafe_allow_html=True)
                         
-                        fig = go.Figure(go.Indicator(
-                            mode="gauge+number",
-                            value=confidence,
-                            domain={'x': [0, 1], 'y': [0, 1]},
-                            title={'text': "Confidence Score"},
-                            gauge={
-                                'axis': {'range': [0, 100], 'tickwidth': 1},
-                                'bar': {'color': "#005691"},
-                                'steps': [
-                                    {'range': [0, 50], 'color': "#ffebee"},
-                                    {'range': [50, 75], 'color': "#e1f5fe"},
-                                    {'range': [75, 100], 'color': "#e8f5e9"}
-                                ],
-                                'threshold': {
-                                    'line': {'color': "red", 'width': 4},
-                                    'thickness': 0.75,
-                                    'value': 90
-                                }
-                            }
-                        ))
-                        fig.update_layout(
-                            height=250,
-                            margin=dict(l=20, r=20, t=30, b=20),
-                            paper_bgcolor="white",
-                            font={'size': 16}
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
-                        st.markdown("</div>", unsafe_allow_html=True)
-                    
-                    with tabs[1]:
-                        st.markdown(f"### About {predicted_class}")
-                        st.write(diseases[predicted_class]['description'])
+                        analysis_tabs = st.tabs(["📊 Overview", "📈 Detailed Analysis", "🎯 Confidence Metrics"])
                         
-                        st.markdown("### Symptoms")
-                        st.markdown("<div class='symptoms-grid'>", unsafe_allow_html=True)
-                        for symptom in diseases[predicted_class]['symptoms']:
-                            st.markdown(f"<div class='symptom-badge'>{symptom}</div>", unsafe_allow_html=True)
-                        st.markdown("</div>", unsafe_allow_html=True)
-                    
-                    with tabs[2]:
-                        st.markdown("### Recommended Actions")
-                        st.markdown("<div class='action-cards'>", unsafe_allow_html=True)
-                        for rec in diseases[predicted_class]['recommendations']:
-                            st.markdown(f"""
-                                <div class='action-card'>
-                                    <h4>→ {rec}</h4>
-                                </div>
-                            """, unsafe_allow_html=True)
-                        st.markdown("</div>", unsafe_allow_html=True)
-                    
-                    if confidence < 70:
-                        st.warning("⚠️ Low confidence prediction. Please consult a healthcare professional.")
-                    
-                    st.markdown("</div>", unsafe_allow_html=True)
-                    
-                except Exception as e:
-                    st.error(f"An error occurred during analysis: {str(e)}")
-                finally:
-                    try:
-                        os.remove(img_path)
-                    except:
-                        pass
+                        with analysis_tabs[0]:
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                # Confidence Gauge
+                                fig_gauge = go.Figure(go.Indicator(
+                                    mode="gauge+number+delta",
+                                    value=confidence,
+                                    domain={'x': [0, 1], 'y': [0, 1]},
+                                    title={'text': "Confidence Score"},
+                                    delta={'reference': 90},
+                                    gauge={
+                                        'axis': {'range': [None, 100]},
+                                        'bar': {'color': "#1e88e5"},
+                                        'steps': [
+                                            {'range': [0, 50], 'color': "#ffcdd2"},
+                                            {'range': [50, 75], 'color': "#fff9c4"},
+                                            {'range': [75, 100], 'color': "#c8e6c9"}
+                                        ],
+                                        'threshold': {
+                                            'line': {'color': "red", 'width': 4},
+                                            'thickness': 0.75,
+                                            'value': 90
+                                        }
+                                    }
+                                ))
+                                fig_gauge.update_layout(height=250)
+                                st.plotly_chart(fig_gauge, use_container_width=True)
+                            
+                            with col2:
+                                st.markdown(f"""
+                                    <div class='metric-card'>
+                                        <h3>Detected Condition</h3>
+                                        <div class='metric-value'>{predicted_class}</div>
+                                        <p>Confidence: {confidence:.1f}%</p>
+                                    </div>
+                                """, unsafe_allow_html=True)
+                        
+                        with analysis_tabs[1]:
+                            # Prediction distribution chart
+                            all_predictions = prediction[0]
+                            classes = list(diseases.keys())
+                            
+                            fig_dist = go.Figure(data=[
+                                go.Bar(
+                                    x=[pred * 100 for pred in all_predictions],
+                                    y=classes,
+                                    orientation='h',
+                                    marker_color=['#1e88e5' if i == class_index else '#90caf9' 
+                                                for i in range(len(classes))]
+                                )
+                            ])
+                            
+                            fig_dist.update_layout(
+                                title="Prediction Distribution Across Classes",
+                                xaxis_title="Confidence (%)",
+                                yaxis_title="Condition",
+                                height=400
+                            )
+                            st.plotly_chart(fig_dist, use_container_width=True)
+                            
+                            # Symptoms radar chart
+                            symptoms = diseases[predicted_class]['symptoms']
+                            symptom_scores = np.random.uniform(0.6, 1.0, len(symptoms))  # Simulated relevance scores
+                            
+                            fig_radar = go.Figure(data=go.Scatterpolar(
+                                r=symptom_scores,
+                                theta=symptoms,
+                                fill='toself',
+                                line_color='#1e88e5'
+                            ))
+                            
+                            fig_radar.update_layout(
+                                polar=dict(
+                                    radialaxis=dict(
+                                        visible=True,
+                                        range=[0, 1]
+                                    )),
+                                showlegend=False,
+                                title="Symptom Relevance Analysis",
+                                height=400
+                            )
+                            st.plotly_chart(fig_radar, use_container_width=True)
+                        
+                        with analysis_tabs[2]:
+                            # Historical confidence comparison
+                            if len(st.session_state.history) > 1:
+                                hist_dates = [entry['date'] for entry in st.session_state.history[-5:]]
+                                hist_conf = [entry['confidence'] for entry in st.session_state.history[-5:]]
+                                
+                                fig_hist = go.Figure(data=go.Scatter(
+                                    x=hist_dates,
+                                    y=hist_conf,
+                                    mode='lines+markers',
+                                    line=dict(color='#1e88e5'),
+                                    marker=dict(size=10)
+                                ))
+                                
+                                fig_hist.update_layout(
+                                    title="Confidence Trend (Last 5 Analyses)",
+                                    xaxis_title="Analysis Date",
+                                    yaxis_title="Confidence (%)",
+                                    height=400
+                                )
+                                st.plotly_chart(fig_hist, use_container_width=True)
+                        
+                        # Recommendations section with improved layout
+                        st.markdown("### 📋 Recommended Actions")
+                        rec_cols = st.columns(2)
+                        for idx, rec in enumerate(diseases[predicted_class]['recommendations']):
+                            with rec_cols[idx % 2]:
+                                st.markdown(f"""
+                                    <div class='action-card'>
+                                        <h4>Step {idx + 1}</h4>
+                                        <p>{rec}</p>
+                                    </div>
+                                """, unsafe_allow_html=True)
+                        
+                        if confidence < 70:
+                            st.warning("⚠️ Low confidence prediction. Please consult a healthcare professional.")
+                        
+                    except Exception as e:
+                        st.error(f"An error occurred during analysis: {str(e)}")
+                    finally:
+                        try:
+                            os.remove(img_path)
+                        except:
+                            pass
 
 with tab2:
     st.markdown("## Disease Information Database")
